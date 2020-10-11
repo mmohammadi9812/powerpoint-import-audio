@@ -9,6 +9,10 @@ from tkinter import filedialog
 logging.basicConfig(level=logging.DEBUG, filename=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(lineno)d - %(message)s')
 
 
+AUDIO_TARGET_NAME = 'audio'
+AUDIO_TARGET_GLOB = 'ppt/media/*.m4a'
+
+
 def ffmpeg() -> str:
     if shutil.which('ffmpeg') is None:
         if sys.platform == 'win32':
@@ -38,17 +42,42 @@ def get_files(initdir: Optional[str]=None, filetypes: Tuple[Tuple[str]]=(("Power
     return pptx_files
 
 
-def extract_audio(filepath: Union[str, Path]) -> None:
+def gettarget(filepath: Union[str, Path]) -> Path:
     filepath = Path(filepath) if type(filepath) is str else filepath
     name = filepath.stem
     parent = filepath.parent
     logging.debug(f'name: {name}')
     logging.debug(f'parent: {parent}')
     target = Path(parent / name)
+    return target
+
+
+def extract_audio(filepath: Union[str, Path]) -> None:
+    target = gettarget(filepath)
     logging.debug(f'target: {target}')
     target.mkdir()
     with zipfile.ZipFile(filepath, 'r') as zip:
         zip.extractall(target)
+
+
+def prune(filepath: Union[str, Path]) -> None:
+    target = gettarget(filepath)
+    audio_target = Path(target / AUDIO_TARGET_NAME)
+    audio_target.mkdir()
+    audio_files = target.glob(AUDIO_TARGET_GLOB)
+    for audio in audio_files:
+        audio_name = Path(audio).name
+        logging.debug(f'audio: {audio}')
+        shutil.move(audio, Path(audio_target / audio_name))
+    useless = os.listdir(target)
+    useless.remove('audio')
+    for f in useless:
+        path = Path(target / f)
+        logging.debug(f'removing {path} ...')
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
 
 
 if __name__ == "__main__":
@@ -73,21 +102,7 @@ if __name__ == "__main__":
         target = Path(parent / name)
         extract_audio(pptx)
         audio_target = Path(target / 'audio')
-        audio_target.mkdir()
-        audio_files = target.glob("ppt/media/*.m4a")
-        for audio in audio_files:
-            audio_name = Path(audio).name
-            logging.debug(f'audio: {audio}')
-            shutil.move(audio, Path(audio_target / audio_name))
-        useless = os.listdir(target)
-        useless.remove('audio')
-        for f in useless:
-            path = Path(target / f)
-            logging.debug(f'removing {path} ...')
-            if path.is_dir():
-                shutil.rmtree(path)
-            else:
-                path.unlink()
+        prune(pptx)
         os.chdir(audio_target)
         # DONE: merge audio files to one file
         audio_files = audio_target.glob('*.m4a')
