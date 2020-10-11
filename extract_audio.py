@@ -95,6 +95,15 @@ def convert_to_pcm(filepath: Union[str, Path]) -> List[str]:
     return pcm_files
 
 
+def append_pcm_files(filepath: Union[str, Path], pcmfiles: List[str]) -> Union[str, Path]:
+    audio_target = get_audio_target(filepath)
+    outpcm = Path(audio_target / 'out.pcm')
+    with open(outpcm, 'ab') as out:
+        for pcm in pcm_files:
+            with open(pcm, 'rb') as p:
+                out.write(p.read())
+
+
 if __name__ == "__main__":
     logging.debug(sys.platform)
     cwd = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
@@ -123,11 +132,8 @@ if __name__ == "__main__":
         pcm_files = convert_to_pcm(pptx)
         outpcm = Path(audio_target / 'out.pcm')
         outm4a = 'out.m4a'
+        append_pcm_files(pptx, pcm_files)
         os.chdir(audio_target)
-        with open(outpcm, 'ab') as out:
-            for pcm in pcm_files:
-                with open(pcm, 'rb') as p:
-                    out.write(p.read())
         process = subprocess.run([command, '-f', 's16le', '-ac', '2', '-ar', '48000', '-i', f'{outpcm}', '-c:a', 'aac', '-b:a', '192k', '-ac', '2', outm4a], check=True, stdout=subprocess.PIPE)
         logging.debug(process.stdout)
         outpcm.unlink()
