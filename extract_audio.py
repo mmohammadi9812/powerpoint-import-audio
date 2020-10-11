@@ -1,5 +1,5 @@
 import os, sys, shutil, re, subprocess, zipfile, logging
-from typing import List, Tuple, Union, Any, Optional
+from typing import List, Tuple, Callable, Union, Any, Optional
 from pathlib import Path
 
 import tkinter as tk
@@ -42,7 +42,7 @@ def get_files(initdir: Optional[str]=None, filetypes: Tuple[Tuple[str]]=(("Power
     return pptx_files
 
 
-def gettarget(filepath: Union[str, Path]) -> Path:
+def get_target(filepath: Union[str, Path]) -> Path:
     filepath = Path(filepath) if type(filepath) is str else filepath
     name = filepath.stem
     parent = filepath.parent
@@ -51,9 +51,10 @@ def gettarget(filepath: Union[str, Path]) -> Path:
     target = Path(parent / name)
     return target
 
+get_audio_target: Union[Callable[[str], Path], Callable[[Path], Path]] = lambda path: Path(get_target(path) / AUDIO_TARGET_NAME)
 
 def extract_audio(filepath: Union[str, Path]) -> None:
-    target = gettarget(filepath)
+    target = get_target(filepath)
     logging.debug(f'target: {target}')
     target.mkdir()
     with zipfile.ZipFile(filepath, 'r') as zip:
@@ -61,8 +62,8 @@ def extract_audio(filepath: Union[str, Path]) -> None:
 
 
 def prune(filepath: Union[str, Path]) -> None:
-    target = gettarget(filepath)
-    audio_target = Path(target / AUDIO_TARGET_NAME)
+    target = get_target(filepath)
+    audio_target = get_audio_target(filepath)
     audio_target.mkdir()
     audio_files = target.glob(AUDIO_TARGET_GLOB)
     for audio in audio_files:
@@ -78,6 +79,20 @@ def prune(filepath: Union[str, Path]) -> None:
             shutil.rmtree(path)
         else:
             path.unlink()
+
+
+def convert_to_pcm(filepath: Union[str, Path]) -> List[str]:
+    audio_target = get_audio_target(filepath)
+    audio_files = audio_target.glob('*.m4a')
+    for file in audio_files:
+        file_name = Path(file).stem
+        logging.debug(f'converting {file} ...')
+        process = subprocess.run([command, '-i', file, '-c:a', 'pcm_s16le', '-ac', '2', '-ar', '48000', '-f', 's16le', f'{file_name}.pcm'], check=True, stdout=subprocess.PIPE)
+        logging.debug(process.stdout)
+        Path(file).unlink()
+    pcm_files = natural_sort([path.name for path in audio_target.glob('*.pcm')])
+    logging.debug(f'pcm_files: {pcm_files}')
+    return pcm_files
 
 
 if __name__ == "__main__":
@@ -105,15 +120,7 @@ if __name__ == "__main__":
         prune(pptx)
         os.chdir(audio_target)
         # DONE: merge audio files to one file
-        audio_files = audio_target.glob('*.m4a')
-        for file in audio_files:
-            file_name = Path(file).stem
-            logging.debug(f'converting {file} ...')
-            process = subprocess.run([command, '-i', file, '-c:a', 'pcm_s16le', '-ac', '2', '-ar', '48000', '-f', 's16le', f'{file_name}.pcm'], check=True, stdout=subprocess.PIPE)
-            logging.debug(process.stdout)
-            Path(file).unlink()
-        pcm_files = natural_sort([path.name for path in audio_target.glob('*.pcm')])
-        logging.debug(f'pcm_files: {pcm_files}')
+        pcm_files = convert_to_pcm(pptx)
         outpcm = Path(audio_target / 'out.pcm')
         outm4a = 'out.m4a'
         os.chdir(audio_target)
