@@ -1,0 +1,103 @@
+import os, sys, shutil, re, subprocess, zipfile, logging
+from pathlib import Path
+
+import tkinter as tk
+from tkinter import filedialog
+
+
+logging.basicConfig(level=logging.DEBUG, file=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+def ffmpeg() -> str:
+    if shutil.which('ffmpeg') is None:
+        if sys.platform == 'win32':
+            if shutil.which('ffmpeg.exe') is None:
+                raise ValueError('ffmpeg doesn\'t exists!')
+            else:
+                command = 'ffmpeg.exe'
+    else:
+        command = 'ffmpeg'
+    return command
+
+
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
+
+if __name__ == "__main__":
+    logging.debug(sys.platform)
+    cwd = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+    command = ffmpeg()
+    if not Path(cwd).exists():
+        raise ValueError(f'{cwd} doesn\'t exists!')
+    cwd = Path(cwd)
+    logging.debug(f'cwd: {cwd}')
+    # pptx_files = cwd.glob("*.pptx")
+    # logging.debug(f'pptx_files: {pptx_files}')
+    root = tk.Tk()
+    root.withdraw()
+
+    pptx_files = filedialog.askopenfilenames(
+        initialdir=cwd,
+        filetypes =(("PowerPoint", "*.pptx"),),
+        title = "Choose powerpoint files.")
+
+    logging.debug(f'file_path: #{pptx_files}# type: {type(pptx_files)}')
+
+    for pptx in pptx_files:
+        name = Path(pptx).stem
+        parent = Path(pptx).parent
+        logging.debug(f'parent: {parent}')
+        logging.debug(f'name: {name}')
+        target = Path(parent / name)
+        logging.debug(f'target: {target}')
+        target.mkdir()
+        with zipfile.ZipFile(pptx, 'r') as zip:
+            zip.extractall(parent / name)
+        audio_target = Path(target / 'audio')
+        audio_target.mkdir()
+        audio_files = target.glob("ppt/media/*.m4a")
+        for audio in audio_files:
+            audio_name = Path(audio).name
+            logging.debug(f'audio: {audio}')
+            shutil.move(audio, Path(audio_target / audio_name))
+        useless = os.listdir(target)
+        useless.remove('audio')
+        for f in useless:
+            path = Path(target / f)
+            logging.debug(f'removing {path} ...')
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        os.chdir(audio_target)
+        # DONE: merge audio files to one file
+        audio_files = audio_target.glob('*.m4a')
+        for file in audio_files:
+            file_name = Path(file).stem
+            logging.debug(f'converting {file} ...')
+            process = subprocess.run([command, '-i', file, '-c:a', 'pcm_s16le', '-ac', '2', '-ar', '48000', '-f', 's16le', f'{file_name}.pcm'], check=True, stdout=subprocess.PIPE)
+            logging.debug(process.stdout)
+            Path(file).unlink()
+        pcm_files = natural_sort([path.name for path in audio_target.glob('*.pcm')])
+        logging.debug(f'pcm_files: {pcm_files}')
+        outpcm = Path(audio_target / 'out.pcm')
+        outm4a = 'out.m4a'
+        os.chdir(audio_target)
+        with open(outpcm, 'ab') as out:
+            for pcm in pcm_files:
+                with open(pcm, 'rb') as p:
+                    out.write(p.read())
+        process = subprocess.run([command, '-f', 's16le', '-ac', '2', '-ar', '48000', '-i', f'{outpcm}', '-c:a', 'aac', '-b:a', '192k', '-ac', '2', outm4a], check=True, stdout=subprocess.PIPE)
+        logging.debug(process.stdout)
+        outpcm.unlink()
+        pcm_files = audio_target.glob('*.pcm')
+        for file in pcm_files:
+            file.unlink()
+        os.chdir(parent)
+        shutil.move(Path(audio_target / outm4a), Path(parent / (name + '.m4a')))
+        shutil.rmtree(name)
+
+
