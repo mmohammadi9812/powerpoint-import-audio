@@ -4,3 +4,4 @@
 # But not these files...
 !.gitignore
 !extract_audio.py
+!LICENSE
