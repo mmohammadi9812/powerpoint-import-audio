@@ -3,18 +3,18 @@
     extracting audio files from powerpoint files
     (\*.pptx), to use seperately if needed
 
-    ** TODO choose output file name
+** TODO choose output file name
 
-    ** TODO choose output path
+** TODO choose output path
 
-    ** TODO use tk for mode visual interaction
-        - [] progress bar
+** TODO use tk for mode visual interaction
+    - [] progress bar
 
-    ** TODO handle missing ffmpeg
+** TODO handle missing ffmpeg
 
-    ** TODO use ffmpeg binding for python
+** TODO use ffmpeg binding for python
 
-    ** TODO write a blog post about this
+** TODO write a blog post about this
 
 * How it works
 ** Requirement
