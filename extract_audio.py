@@ -1,11 +1,12 @@
 import os, sys, shutil, re, subprocess, zipfile, logging
+from typing import List, Tuple, Union, Any, Optional
 from pathlib import Path
 
 import tkinter as tk
 from tkinter import filedialog
 
 
-logging.basicConfig(level=logging.DEBUG, file=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, filename=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def ffmpeg() -> str:
@@ -20,10 +21,22 @@ def ffmpeg() -> str:
     return command
 
 
-def natural_sort(l):
+def natural_sort(l) -> List[Any]:
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(l, key=alphanum_key)
+
+
+def get_files(initdir: Optional[str]=None, filetypes: Tuple[Tuple[str]]=(("PowerPoint", "*.pptx"),) ,title: str="Choose powerpoint files.") -> Union[Tuple[str], str]:
+    root = tk.Tk()
+    root.withdraw()
+    initdir = initdir if initdir is not None else os.getcwd()
+    pptx_files = filedialog.askopenfilenames(
+        initialdir=initdir,
+        filetypes=filetypes,
+        title=title)
+    return pptx_files
+
 
 
 if __name__ == "__main__":
@@ -36,14 +49,8 @@ if __name__ == "__main__":
     logging.debug(f'cwd: {cwd}')
     # pptx_files = cwd.glob("*.pptx")
     # logging.debug(f'pptx_files: {pptx_files}')
-    root = tk.Tk()
-    root.withdraw()
 
-    pptx_files = filedialog.askopenfilenames(
-        initialdir=cwd,
-        filetypes =(("PowerPoint", "*.pptx"),),
-        title = "Choose powerpoint files.")
-
+    pptx_files = get_files()
     logging.debug(f'file_path: #{pptx_files}# type: {type(pptx_files)}')
 
     for pptx in pptx_files:
