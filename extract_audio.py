@@ -95,13 +95,27 @@ def convert_to_pcm(filepath: Union[str, Path]) -> List[str]:
     return pcm_files
 
 
-def append_pcm_files(filepath: Union[str, Path], pcmfiles: List[str]) -> Union[str, Path]:
+def append_pcm_files(filepath: Union[str, Path], pcmfiles: List[str]) -> Path:
     audio_target = get_audio_target(filepath)
     outpcm = Path(audio_target / 'out.pcm')
     with open(outpcm, 'ab') as out:
         for pcm in pcm_files:
             with open(pcm, 'rb') as p:
                 out.write(p.read())
+    for pcm in pcm_files:
+        pcm.unlink()
+    return outpcm
+
+
+def out_pcm_to_m4a(filepath: Union[str, Path], outpcm: Path, outm4a: str='out.m4a') -> Path:
+    audio_target = get_audio_target(filepath)
+    command = ffmpeg()
+    os.chdir(audio_target)
+    process = subprocess.run([command, '-f', 's16le', '-ac', '2', '-ar', '48000', '-i', f'{outpcm}', '-c:a', 'aac', '-b:a', '192k', '-ac', '2', outm4a], check=True, stdout=subprocess.PIPE)
+    logging.debug(process.stdout)
+    logging.debug(process.stderr)
+    outpcm.unlink()
+    return Path(audio_target / outm4a)
 
 
 if __name__ == "__main__":
@@ -130,16 +144,8 @@ if __name__ == "__main__":
         os.chdir(audio_target)
         # DONE: merge audio files to one file
         pcm_files = convert_to_pcm(pptx)
-        outpcm = Path(audio_target / 'out.pcm')
-        outm4a = 'out.m4a'
-        append_pcm_files(pptx, pcm_files)
-        os.chdir(audio_target)
-        process = subprocess.run([command, '-f', 's16le', '-ac', '2', '-ar', '48000', '-i', f'{outpcm}', '-c:a', 'aac', '-b:a', '192k', '-ac', '2', outm4a], check=True, stdout=subprocess.PIPE)
-        logging.debug(process.stdout)
-        outpcm.unlink()
-        pcm_files = audio_target.glob('*.pcm')
-        for file in pcm_files:
-            file.unlink()
+        outpcm = append_pcm_files(pptx, pcm_files)
+        outm4a = out_pcm_to_m4a(pptx, outpcm)
         os.chdir(parent)
         shutil.move(Path(audio_target / outm4a), Path(parent / (name + '.m4a')))
         shutil.rmtree(name)
