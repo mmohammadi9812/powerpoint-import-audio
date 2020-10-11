@@ -1,7 +1,7 @@
 * Goals
     This project was invented to help
     extracting audio files from powerpoint files
-    (\*.pptx), to use seperately if needed
+    (.pptx), to use seperately (for ex. in background with 2x) if needed
 
 * How it works
 ** Requirement
