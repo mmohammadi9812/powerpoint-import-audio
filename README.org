@@ -1,20 +1,27 @@
 * Goals
     This project was invented to help
     extracting audio files from powerpoint files
-    (*.pptx), to use seperately if needed
+    (\*.pptx), to use seperately if needed
+
     ** TODO choose output file name
+
     ** TODO choose output path
+
     ** TODO use tk for mode visual interaction
         - [] progress bar
+
     ** TODO handle missing ffmpeg
+
     ** TODO use ffmpeg binding for python
+
     ** TODO write a blog post about this
 
 * How it works
-    ** Requirement
+** Requirement
         - [x] It requires ffmpeg (or ffmpeg.exe, in windows) to be in your path
         - [x] python3
-    ** How to run
+
+** How to run
         #+BEGIN_SRC shell
         python extract_audio.py # windows=
         python3 extract_audio.py # *nix=
