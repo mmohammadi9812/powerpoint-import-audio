@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 
-logging.basicConfig(level=logging.DEBUG, filename=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, filename=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(lineno)d - %(message)s')
 
 
 def ffmpeg() -> str:
@@ -21,7 +21,7 @@ def ffmpeg() -> str:
     return command
 
 
-def natural_sort(l) -> List[Any]:
+def natural_sort(l: List[str]) -> List[Any]:
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(l, key=alphanum_key)
@@ -37,6 +37,18 @@ def get_files(initdir: Optional[str]=None, filetypes: Tuple[Tuple[str]]=(("Power
         title=title)
     return pptx_files
 
+
+def extract_audio(filepath: Union[str, Path]) -> None:
+    filepath = Path(filepath) if type(filepath) is str else filepath
+    name = filepath.stem
+    parent = filepath.parent
+    logging.debug(f'name: {name}')
+    logging.debug(f'parent: {parent}')
+    target = Path(parent / name)
+    logging.debug(f'target: {target}')
+    target.mkdir()
+    with zipfile.ZipFile(filepath, 'r') as zip:
+        zip.extractall(target)
 
 
 if __name__ == "__main__":
@@ -59,10 +71,7 @@ if __name__ == "__main__":
         logging.debug(f'parent: {parent}')
         logging.debug(f'name: {name}')
         target = Path(parent / name)
-        logging.debug(f'target: {target}')
-        target.mkdir()
-        with zipfile.ZipFile(pptx, 'r') as zip:
-            zip.extractall(parent / name)
+        extract_audio(pptx)
         audio_target = Path(target / 'audio')
         audio_target.mkdir()
         audio_files = target.glob("ppt/media/*.m4a")
