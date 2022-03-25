@@ -6,7 +6,9 @@ import tkinter as tk
 from tkinter import filedialog
 
 
-logging.basicConfig(level=logging.DEBUG, filename=Path(Path(__file__).parent / 'log.txt') , format='%(asctime)s - %(levelname)s - %(lineno)d - %(message)s')
+logging.basicConfig(level=logging.DEBUG,
+    filename=Path(Path(__file__).parent / 'log.txt'),
+    format='%(asctime)s - %(levelname)s - %(lineno)d - %(message)s')
 
 
 AUDIO_TARGET_NAME = 'audio'
@@ -14,15 +16,10 @@ AUDIO_TARGET_GLOB = 'ppt/media/*.m4a'
 
 
 def ffmpeg() -> str:
-    if shutil.which('ffmpeg') is None:
-        if sys.platform == 'win32':
-            if shutil.which('ffmpeg.exe') is None:
-                raise ValueError('ffmpeg doesn\'t exists!')
-            else:
-                command = 'ffmpeg.exe'
-    else:
-        command = 'ffmpeg'
-    return command
+    if shutil.which('ffmpeg') is None or (sys.platform == 'win32' and shutil.which('ffmpeg.exe') is None):
+        raise ValueError('ffmpeg doesn\'t exists!')
+
+    return 'ffmpeg.exe' if sys.platform == 'win32' else 'ffmpeg'
 
 
 def natural_sort(l: List[str]) -> List[Any]:
